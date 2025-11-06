@@ -12,10 +12,13 @@ const authRoutes = require('./routes/auth');
 const readingsRoutes = require('./routes/readings');
 const sensorsRoutes = require('./routes/sensors');
 const ticketsRoutes = require('./routes/tickets');
+const userRouter = require('./routes/user');
 
 const app = express();
 app.use(cors());
 app.use(express.json());
+app.use('/api/users', userRouter);
+
 
 // connect MongoDB
 const MONGODB_URI = process.env.MONGODB_URI;
