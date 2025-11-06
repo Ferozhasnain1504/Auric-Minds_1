@@ -1,110 +1,88 @@
-import { useState, useRef } from 'react';
-import { motion } from 'motion/react';
-import { Layout } from '../components/Layout';
-import { GlassCard } from '../components/GlassCard';
-import { Mic, Square, CloudUpload } from 'lucide-react';
+import { useState, useRef } from "react";
+import { Mic, Square } from "lucide-react";
+import { Layout } from "../components/Layout";
+import { GlassCard } from "../components/GlassCard";
 import API from "../api/axios";
 
 export default function VoiceAnalytics() {
   const [isRecording, setIsRecording] = useState(false);
   const [audioURL, setAudioURL] = useState<string | null>(null);
-  const [uploadStatus, setUploadStatus] = useState("");
+  const [status, setStatus] = useState("");
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
 
-  const mediaRecorderRef = useRef<any>(null);
-  const audioChunksRef = useRef<any[]>([]);
-
-  // ✅ Start Recording
   const startRecording = async () => {
-    setUploadStatus("");
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    mediaRecorderRef.current = new MediaRecorder(stream, { mimeType: "audio/wav" });
+    setStatus("");
+    setAudioURL(null);
 
-
-    mediaRecorderRef.current = mediaRecorder;
-    audioChunksRef.current = [];
-
-    mediaRecorder.start();
-    setIsRecording(true);
-
-    mediaRecorder.ondataavailable = (e: any) => {
-      audioChunksRef.current.push(e.data);
-    };
-
-    mediaRecorder.onstop = () => {
-      const blob = new Blob(chunksRef.current, { type: "audio/wav" });
-      const url = URL.createObjectURL(blob);
-      setAudioURL(url);
-
-      // Upload to backend
-      const formData = new FormData();
-      formData.append("file", blob, "recording.wav");
-
-      uploadAudio(formData);
-    };
-  };
-
-  // ✅ Stop Recording & Upload
-  const stopRecording = () => {
-    if (!mediaRecorderRef.current) return;
-    mediaRecorderRef.current.stop();
-    setIsRecording(false);
-  };
-
-  // ✅ Upload to backend API
-  const uploadAudio = async (formData: FormData) => {
     try {
-      setUploadStatus("Uploading...");
-      const res = await API.post("/audio/upload", formData, {
-        headers: { "Content-Type": "multipart/form-data" }
-      });
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = recorder;
+      audioChunksRef.current = [];
 
-      setUploadStatus(`✅ Saved at: ${res.data.fileUrl}`);
-      console.log("Uploaded:", res.data);
+      recorder.ondataavailable = (e) => audioChunksRef.current.push(e.data);
 
+      recorder.onstop = async () => {
+        const blob = new Blob(audioChunksRef.current, { type: "audio/wav" });
+        const formData = new FormData();
+        formData.append("audio", blob, "recording.wav");
+
+        try {
+          setStatus("Uploading...");
+          const res = await API.post("/audio/upload", formData, {
+            headers: { "Content-Type": "multipart/form-data" },
+          });
+          setAudioURL("http://localhost:5000" + res.data.fileUrl);
+          setStatus("✅ Uploaded successfully!");
+        } catch (err) {
+          console.error(err);
+          setStatus("❌ Upload failed");
+        }
+      };
+
+      recorder.start();
+      setIsRecording(true);
     } catch (err) {
+      setStatus("⚠️ Cannot access microphone!");
       console.error(err);
-      setUploadStatus("❌ Upload failed");
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current) {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
     }
   };
 
   return (
     <Layout>
-      <div className="space-y-8">
-        <h1 className="text-4xl">🎤 Voice Recorder</h1>
+      <div className="flex flex-col items-center justify-center h-full space-y-6">
+        <h1 className="text-3xl font-semibold">🎙️ Voice Recorder</h1>
 
-        <GlassCard className="p-10 flex flex-col items-center" glow>
+        <GlassCard className="p-10 flex flex-col items-center">
           {!isRecording ? (
-            <motion.button
-              className="bg-[#3A7AFE] text-white w-28 h-28 rounded-full flex items-center justify-center text-4xl shadow-lg cursor-pointer"
+            <button
+              className="bg-blue-600 text-white w-24 h-24 rounded-full flex items-center justify-center text-3xl"
               onClick={startRecording}
             >
-              <Mic className="w-14 h-14" />
-            </motion.button>
+              <Mic className="w-10 h-10" />
+            </button>
           ) : (
-            <motion.button
-              className="bg-[#FF3D57] text-white w-28 h-28 rounded-full flex items-center justify-center shadow-lg cursor-pointer"
+            <button
+              className="bg-red-500 text-white w-24 h-24 rounded-full flex items-center justify-center text-3xl"
               onClick={stopRecording}
             >
-              <Square className="w-14 h-14" />
-            </motion.button>
+              <Square className="w-10 h-10" />
+            </button>
           )}
 
-          <p className="mt-4 text-lg text-gray-200">
-            {isRecording ? "Recording..." : "Tap to Record"}
-          </p>
+          <p className="mt-4 text-lg">{isRecording ? "Recording..." : "Tap to Record"}</p>
+          <p className="text-sm text-green-400 mt-2">{status}</p>
 
-          {/* ✅ Uploaded info */}
-          {uploadStatus && (
-            <p className="mt-4 text-sm text-green-400">{uploadStatus}</p>
-          )}
-
-          {/* ✅ Preview Audio */}
           {audioURL && (
-            <audio
-              controls
-              src={audioURL}
-              className="mt-4 w-full max-w-md"
-            />
+            <audio controls src={audioURL} className="mt-4 w-full max-w-md" />
           )}
         </GlassCard>
       </div>

@@ -15,6 +15,7 @@ const readingsRoutes = require('./routes/readings');
 const sensorsRoutes = require('./routes/sensors');
 const ticketsRoutes = require('./routes/tickets');
 const userRouter = require('./routes/user');
+const audioRoute = require("./routes/audio");
 
 const app = express();
 
