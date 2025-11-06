@@ -1,0 +1,47 @@
+# Node modules
+node_modules/
+
+# Environment variables
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS-specific
+.DS_Store
+Thumbs.db
+
+# Build output
+dist/
+build/
+
+# Dependency lock files (optional if using one package manager)
+package-lock.json
+yarn.lock
+
+# IDE/editor configs
+.vscode/
+.idea/
+*.sublime-workspace
+*.sublime-project
+
+# Test coverage
+coverage/
+
+# MongoDB dump files
+dump/
+
+# Optional: ignore frontend build artifacts if separate
+frontend/build/
+frontend/dist/
+
+# Optional: ignore uploads or temp files
+uploads
