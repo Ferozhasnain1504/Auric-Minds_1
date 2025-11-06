@@ -60,4 +60,8 @@
         'ab74d2ff-c994-4f20-a4cb-ef840e963822-00-337kcf1kr7a13.pike.replit.dev',
       ]
     },
+    define: {
+      global : 'window',
+      process: { env: {} },
+    }
   });
