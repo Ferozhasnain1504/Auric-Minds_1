@@ -5,9 +5,11 @@ const cors = require('cors');
 const mongoose = require('mongoose');
 const http = require('http');
 const { Server } = require('socket.io');
+const audioRoutes = require("./routes/audio");
 const path = require('path');
 
-// --- Import Routes ---
+
+// routes
 const authRoutes = require('./routes/auth');
 const readingsRoutes = require('./routes/readings');
 const sensorsRoutes = require('./routes/sensors');
@@ -28,6 +30,9 @@ app.use('/api/auth', authRoutes);
 app.use('/api/readings', readingsRoutes);
 app.use('/api/sensors', sensorsRoutes);
 app.use('/api/tickets', ticketsRoutes);
+app.use("/api/audio", audioRoutes);
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
 
 // --- Database Connection ---
 const MONGODB_URI = process.env.MONGODB_URI;
