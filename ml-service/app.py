@@ -1,125 +1,146 @@
 from flask import Flask, request, jsonify
-import librosa
 import numpy as np
-import soundfile as sf
 import os
-from datetime import datetime
-import joblib
+import time
+from werkzeug.utils import secure_filename
 
-# ----------------------------------------------------
-#  Initialize Flask App
-# ----------------------------------------------------
+# --- IMPORT ALL LOGIC FROM UTILITY FILE ---
+from utils.wellness_logic import (
+    extract_features, 
+    predict_vsd_risk, 
+    DHT22_KalmanFilter, 
+    WellnessFusionEngine # <-- NEW FUSION ENGINE
+)
+
 app = Flask(__name__)
+UPLOAD_FOLDER = 'temp_uploads'
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
-# ----------------------------------------------------
-#  Load Pre-trained Model and Scaler
-# ----------------------------------------------------
-SCALER_PATH = "models/vsd_feature_scaler.pkl"
-MODEL_PATH  = "models/vsd_logistic_model.pkl"
+# Ensure the upload directory exists
+if not os.path.exists(UPLOAD_FOLDER):
+    os.makedirs(UPLOAD_FOLDER)
+
+
+# ==========================================================
+# 🧠 GLOBAL INITIALIZATION OF STATE ESTIMATORS
+# ==========================================================
+
+# Initial values for Kalman Filters (Based on a typical indoor environment)
+INITIAL_TEMP = 25.0
+INITIAL_HUMIDITY = 50.0
+INITIAL_WELLNESS = 80.0 # Start with a neutral/good wellness score
 
 try:
-    scaler = joblib.load(SCALER_PATH)
-    model  = joblib.load(MODEL_PATH)
-    print("✅ Loaded model and scaler successfully!")
+    # 1. Initialize DHT22 Kalman Filter for smoothing T/H
+    DHT_KALMAN_FILTER = DHT22_KalmanFilter(INITIAL_TEMP, INITIAL_HUMIDITY)
+    
+    # 2. Initialize Wellness Fusion Engine (Main state tracker)
+    FUSION_ENGINE = WellnessFusionEngine(initial_wellness=INITIAL_WELLNESS)
+    
+    print("\n==============================================")
+    print("🤖 Service Initialized: All components ready.")
+    print(f"🌡️ Starting T/H Estimate: {DHT_KALMAN_FILTER.temp_estimate:.2f}C / {DHT_KALMAN_FILTER.humidity_estimate:.2f}%")
+    print(f"✨ Starting Wellness Index: {FUSION_ENGINE.wellness_estimate:.2f}/100")
+    print("==============================================")
+    
 except Exception as e:
-    print("❌ Error loading model or scaler:", e)
-    scaler, model = None, None
+    print(f"FATAL ERROR during initialization (Check models/ or wellness_logic.py): {e}")
+    # Consider exiting the application if initialization fails
 
-# ----------------------------------------------------
-#  Feature Extraction
-# ----------------------------------------------------
-def extract_features(file_path):
-    """Extract audio features from a .wav file"""
-    y, sr = librosa.load(file_path, sr=None)
 
-    rms = np.mean(librosa.feature.rms(y=y))
-    zcr = np.mean(librosa.feature.zero_crossing_rate(y))
-    mfccs = np.mean(librosa.feature.mfcc(y=y, sr=sr, n_mfcc=13), axis=1)
-    pitch, _ = librosa.piptrack(y=y, sr=sr)
-    avg_pitch = np.mean(pitch[pitch > 0]) if np.any(pitch > 0) else 0
-
-    return {
-        "rms": float(rms),
-        "zcr": float(zcr),
-        "avg_pitch": float(avg_pitch),
-        "mfccs": mfccs.tolist()
-    }
-
-# ----------------------------------------------------
-#  Real Prediction using Logistic Model
-# ----------------------------------------------------
-def predict_stress_fatigue(features):
-    if scaler is None or model is None:
-        raise RuntimeError("Model or scaler not loaded!")
-
-    # Prepare features in same order used during training
-    X = np.array([
-        features["rms"],
-        features["zcr"],
-        features["avg_pitch"],
-        *features["mfccs"][:13]   # first 13 MFCCs
-    ]).reshape(1, -1)
-
-    # Scale and predict
-    X_scaled = scaler.transform(X)
-    y_pred = model.predict(X_scaled)[0]
-    y_prob = model.predict_proba(X_scaled)[0].tolist()
-
-    # Convert probability to readable scores
-    stress_score = int(y_prob[1] * 100)   # class 1 = stressed
-    fatigue_score = 100 - stress_score
-
-    if stress_score < 30:
-        recommendation = "You seem calm. Keep it up!"
-    elif stress_score < 60:
-        recommendation = "Moderate stress detected. Take short breaks."
-    else:
-        recommendation = "High stress detected. Try deep breathing exercises."
-
-    return {
-        "stress_score": stress_score,
-        "fatigue_score": fatigue_score,
-        "label": int(y_pred),
-        "recommendation": recommendation
-    }
-
-# ----------------------------------------------------
-#  Routes
-# ----------------------------------------------------
-@app.route("/")
-def home():
-    return jsonify({"ok": True, "msg": "ML Service Running", "time": str(datetime.utcnow())})
-
-@app.route("/analyze", methods=["POST"])
-def analyze_audio():
-    if "audio" not in request.files:
-        return jsonify({"error": "No audio file provided"}), 400
-
-    audio_file = request.files["audio"]
-    file_path = f"temp_{datetime.now().timestamp()}.wav"
-    audio_file.save(file_path)
+# ==========================================================
+# 🎙️ ENDPOINT 1: VOICE ANALYSIS (/analyze)
+# Used by Node.js Gateway
+# ==========================================================
+@app.route('/analyze', methods=['POST'])
+def analyze_voice():
+    # 1. Handle File Upload
+    if 'audio' not in request.files:
+        return jsonify({'error': 'No audio file part in the request'}), 400
+    
+    file = request.files['audio']
+    filename = secure_filename(f"temp_{time.time()}.wav")
+    filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+    file.save(filepath)
 
     try:
-        features = extract_features(file_path)
-        result = predict_stress_fatigue(features)
-        os.remove(file_path)
+        # 2. Predict Volatile Risk Score
+        features = extract_features(filepath)
+        if features is None:
+            return jsonify({'error': 'Feature extraction failed or file corrupted'}), 500
+        
+        vsd_risk_score = predict_vsd_risk(features)
+        
+        # 3. Fusion: Use VSD score to update the state
+        # The fusion engine reads the current *smoothed* ambient state
+        smoothed_T = DHT_KALMAN_FILTER.temp_estimate
+        smoothed_H = DHT_KALMAN_FILTER.humidity_estimate
+        
+        final_wellness_index = FUSION_ENGINE.update_fusion(
+            vsd_risk_score, 
+            smoothed_T, 
+            smoothed_H, 
+            measurement_source='VSD' # <-- Voice score is the measurement
+        )
 
         return jsonify({
-            "ok": True,
-            "features": features,
-            "stress_score": result["stress_score"],
-            "fatigue_score": result["fatigue_score"],
-            "label": result["label"],
-            "recommendation": result["recommendation"]
+            'status': 'success',
+            'vsd_risk_score': round(vsd_risk_score, 2),
+            'current_temp_estimate': round(smoothed_T, 2),
+            'current_humidity_estimate': round(smoothed_H, 2),
+            'final_wellness_index': round(final_wellness_index, 2)
         })
-    except Exception as e:
-        # keep file cleanup safe
-        if os.path.exists(file_path):
-            os.remove(file_path)
-        return jsonify({"error": str(e)}), 500
 
-# ----------------------------------------------------
-#  Run App
-# ----------------------------------------------------
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5001, debug=True)
+    except Exception as e:
+        app.logger.error(f'ML Processing Error in /analyze: {e}')
+        return jsonify({'error': f'ML Processing Error: {e}'}), 500
+        
+    finally:
+        # 4. Cleanup
+        if os.path.exists(filepath):
+            os.remove(filepath)
+
+
+# ==========================================================
+# 🌡️ ENDPOINT 2: AMBIENT SENSING (/ambient)
+# Used by ESP32/another service
+# ==========================================================
+@app.route('/ambient', methods=['POST'])
+def update_ambient():
+    # Expects JSON data: {"temperature": 25.1, "humidity": 51.5}
+    try:
+        data = request.get_json()
+        temp = float(data['temperature'])
+        humidity = float(data['humidity'])
+        
+        # 1. Smooth the new readings
+        smoothed_T, smoothed_H = DHT_KALMAN_FILTER.update_filter(temp, humidity)
+        
+        # 2. Fusion: Use the smoothed ambient data (heuristic) as the measurement for state update
+        # VSD score used here is arbitrary, as the source is AMBIENT
+        final_wellness_index = FUSION_ENGINE.update_fusion(
+            FUSION_ENGINE.wellness_estimate, 
+            smoothed_T, 
+            smoothed_H, 
+            measurement_source='AMBIENT' # <-- Ambient heuristic is the measurement
+        )
+
+        return jsonify({
+            'status': 'success',
+            'message': 'Ambient data smoothed and fused.',
+            'smoothed_temperature': round(smoothed_T, 2),
+            'smoothed_humidity': round(smoothed_H, 2),
+            'final_wellness_index': round(final_wellness_index, 2)
+        })
+
+    except Exception as e:
+        app.logger.error(f'Ambient Data Error in /ambient: {e}')
+        return jsonify({'error': f'Ambient Data Error: Invalid input or processing failure: {e}'}), 400
+
+
+# ==========================================================
+# 🏁 RUN APPLICATION
+# ==========================================================
+if __name__ == '__main__':
+    # Ensure this port matches what your Node.js gateway is calling
+    app.run(debug=True, host='0.0.0.0', port=5001)
