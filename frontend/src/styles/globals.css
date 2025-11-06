@@ -1,0 +1,79 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --primary: #3A7AFE;
+    --secondary: #B517FF;
+    --success: #00E676;
+    --warning: #FFB300;
+    --danger: #FF3D57;
+    --background: #0a0e1a;
+    --card-bg: rgba(255, 255, 255, 0.05);
+  }
+  
+  @font-face {
+    font-family: 'Poppins';
+    font-weight: 700;
+    src: local('Poppins Bold');
+  }
+
+  @font-face {
+    font-family: 'Inter';
+    font-weight: 400;
+    src: local('Inter');
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-[#0a0e1a] text-white;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    overflow-x: hidden;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-20px); }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 20px rgba(58, 122, 254, 0.5); }
+  50% { box-shadow: 0 0 40px rgba(58, 122, 254, 0.8); }
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  75% { transform: translateX(5px); }
+}
+
+.glass-card {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+}
+
+.neon-glow {
+  box-shadow: 0 0 20px rgba(58, 122, 254, 0.5),
+              0 0 40px rgba(181, 23, 255, 0.3);
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+.animate-shake {
+  animation: shake 0.5s ease-in-out infinite;
+}

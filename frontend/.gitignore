@@ -1,26 +1,64 @@
-# Logs
-logs
-*.log
+# === Node.js / Next.js ===
+node_modules/
+.npm/
+.pnp/
+.pnp.js
+.next/
+out/
+dist/
+build/
+coverage/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
-
-node_modules
-dist
-dist-ssr
-*.local
 .env
-*.env
+.env.local
+.env.*.local
 
-# Editor directories and files
-.vscode/*
-!.vscode/extensions.json
-.idea
+# === Python (Flask ML Service) ===
+__pycache__/
+*.py[cod]
+*.so
+venv/
+env/
+.python-version
+*.log
+
+# === Temporary & Generated Files ===
+temp/
+tmp/
 .DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
+Thumbs.db
+*.cache
+*.log
+*.pid
+
+# === Testing Artifacts ===
+coverage/
+test-results/
+
+# === IDE & Editor Files ===
+.vscode/
+.idea/
+*.swp
+
+# === OS files ===
+.DS_Store
+ehthumbs.db
+Icon?
+$RECYCLE.BIN/
+
+# === Backend Transient Data ===
+/backend/temp/
+backend/uploads/
+
+# === ESP32 / Arduino ===
+*.bin
+*.elf
+*.hex
+
+# === Misc ===
+*.local
+*secret*
+*.pem
+*.key

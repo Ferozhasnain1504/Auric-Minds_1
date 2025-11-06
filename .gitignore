@@ -1,48 +1,64 @@
-# Node modules
+# === Node.js / Next.js ===
 node_modules/
-
-# Environment variables
-
-.env
-.env.local
-.env.development
-.env.test
-.env.production
-
-# Logs
-logs/
-*.log
+.npm/
+.pnp/
+.pnp.js
+.next/
+out/
+dist/
+build/
+coverage/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+.env
+.env.local
+.env.*.local
 
-# OS-specific
+# === Python (Flask ML Service) ===
+__pycache__/
+*.py[cod]
+*.so
+venv/
+env/
+.python-version
+*.log
+
+# === Temporary & Generated Files ===
+temp/
+tmp/
 .DS_Store
 Thumbs.db
+*.cache
+*.log
+*.pid
 
-# Build output
-dist/
-build/
+# === Testing Artifacts ===
+coverage/
+test-results/
 
-# Dependency lock files (optional if using one package manager)
-package-lock.json
-yarn.lock
-
-# IDE/editor configs
+# === IDE & Editor Files ===
 .vscode/
 .idea/
-*.sublime-workspace
-*.sublime-project
+*.swp
 
-# Test coverage
-coverage/
+# === OS files ===
+.DS_Store
+ehthumbs.db
+Icon?
+$RECYCLE.BIN/
 
-# MongoDB dump files
-dump/
+# === Backend Transient Data ===
+/backend/temp/
+backend/uploads/
 
-# Optional: ignore frontend build artifacts if separate
-frontend/build/
-frontend/dist/
+# === ESP32 / Arduino ===
+*.bin
+*.elf
+*.hex
 
-# Optional: ignore uploads or temp files
-uploads
+# === Misc ===
+*.local
+*secret*
+*.pem
+*.key
