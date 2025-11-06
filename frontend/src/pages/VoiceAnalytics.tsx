@@ -1,124 +1,89 @@
 import { useState, useRef } from "react";
+import { Mic, Square } from "lucide-react";
 import { Layout } from "../components/Layout";
 import { GlassCard } from "../components/GlassCard";
-import { motion } from "framer-motion";
-import { Mic, Square, Upload, Activity, AlertTriangle } from "lucide-react";
-import { analyzeReading } from "../api/readings";
-import RecordRTC from "recordrtc";
+import API from "../api/axios";
 
 export default function VoiceAnalytics() {
   const [isRecording, setIsRecording] = useState(false);
-  const [result, setResult] = useState<any>(null);
-  const [loading, setLoading] = useState(false);
-  const recorderRef = useRef<any>(null);
-  const audioBlobRef = useRef<Blob | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [audioURL, setAudioURL] = useState<string | null>(null);
+  const [status, setStatus] = useState("");
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
 
-  // 🎙 Start recording
   const startRecording = async () => {
+    setStatus("");
+    setAudioURL(null);
+
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const recorder = new RecordRTC(stream, {
-        type: "audio",
-        mimeType: "audio/wav",
-        recorderType: RecordRTC.StereoAudioRecorder,
-      });
-      recorder.startRecording();
-      recorderRef.current = recorder;
+      const recorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = recorder;
+      audioChunksRef.current = [];
+
+      recorder.ondataavailable = (e) => audioChunksRef.current.push(e.data);
+
+      recorder.onstop = async () => {
+        const blob = new Blob(audioChunksRef.current, { type: "audio/wav" });
+        const formData = new FormData();
+        formData.append("audio", blob, "recording.wav");
+
+        try {
+          setStatus("Uploading...");
+          const res = await API.post("/audio/upload", formData, {
+            headers: { "Content-Type": "multipart/form-data" },
+          });
+          setAudioURL("http://localhost:5000" + res.data.fileUrl);
+          setStatus("✅ Uploaded successfully!");
+        } catch (err) {
+          console.error(err);
+          setStatus("❌ Upload failed");
+        }
+      };
+
+      recorder.start();
       setIsRecording(true);
-    } catch (error) {
-      alert("Please allow microphone access.");
-      console.error(error);
+    } catch (err) {
+      setStatus("⚠️ Cannot access microphone!");
+      console.error(err);
     }
   };
 
-  // 🛑 Stop recording
-  const stopRecording = async () => {
-    setLoading(true);
-    recorderRef.current.stopRecording(async () => {
-      const blob = recorderRef.current.getBlob();
-      audioBlobRef.current = blob;
+  const stopRecording = () => {
+    if (mediaRecorderRef.current) {
+      mediaRecorderRef.current.stop();
       setIsRecording(false);
-      await sendAudio(blob);
-    });
-  };
-
-  // 📤 Handle upload file
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    if (!file.type.includes("audio")) {
-      alert("Please upload a valid audio file (.wav or .webm)");
-      return;
-    }
-    await sendAudio(file);
-  };
-
-  // 🔁 Send audio to backend
-  const sendAudio = async (blob: Blob) => {
-    setLoading(true);
-    setResult(null);
-
-    const formData = new FormData();
-    formData.append("audio", blob, "voice.wav");
-    formData.append("source", "web");
-
-    try {
-      const response = await analyzeReading(formData);
-      setResult(response.data);
-    } catch (err: any) {
-      console.error("Error analyzing audio:", err);
-      setResult({ error: "Analysis failed" });
-    } finally {
-      setLoading(false);
     }
   };
 
   return (
     <Layout>
-      <div className="space-y-6">
-        <h1 className="text-3xl font-semibold">🎤 Voice Analytics</h1>
-        <p className="text-gray-400">
-          Record or upload your voice to let AI detect stress & fatigue levels in real time.
-        </p>
+      <div className="flex flex-col items-center justify-center h-full space-y-6">
+        <h1 className="text-3xl font-semibold">🎙️ Voice Recorder</h1>
 
-        <GlassCard className="text-center p-10 space-y-6">
-          {/* Record / Stop Button */}
-          <motion.button
-            className={`${
-              isRecording ? "bg-red-500 hover:bg-red-600" : "bg-blue-600 hover:bg-blue-700"
-            } text-white rounded-full p-10 shadow-lg transition`}
-            onClick={isRecording ? stopRecording : startRecording}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-          >
-            {isRecording ? <Square size={40} /> : <Mic size={40} />}
-          </motion.button>
-
-          <p className="text-lg">
-            {isRecording ? "Recording... Speak naturally." : "Press to Start Recording"}
-          </p>
-
-          {/* Upload Button */}
-          <div className="mt-4">
-            <motion.button
-              className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-full flex items-center gap-2 mx-auto"
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => fileInputRef.current?.click()}
+        <GlassCard className="p-10 flex flex-col items-center">
+          {!isRecording ? (
+            <button
+              className="bg-blue-600 text-white w-24 h-24 rounded-full flex items-center justify-center text-3xl"
+              onClick={startRecording}
             >
-              <Upload size={20} /> Upload Audio File
-            </motion.button>
-            <input
-              type="file"
-              accept="audio/*"
-              ref={fileInputRef}
-              onChange={handleFileUpload}
-              className="hidden"
-            />
-          </div>
+              <Mic className="w-10 h-10" />
+            </button>
+          ) : (
+            <button
+              className="bg-red-500 text-white w-24 h-24 rounded-full flex items-center justify-center text-3xl"
+              onClick={stopRecording}
+            >
+              <Square className="w-10 h-10" />
+            </button>
+          )}
 
-          {loading && <p className="text-gray-400 mt-2 animate-pulse">Analyzing audio...</p>}
+          <p className="mt-4 text-lg">{isRecording ? "Recording..." : "Tap to Record"}</p>
+          <p className="text-sm text-green-400 mt-2">{status}</p>
+
+          {audioURL && (
+            <audio controls src={audioURL} className="mt-4 w-full max-w-md" />
+          )}
         </GlassCard>
 
         {/* Results Section */}
