@@ -85,6 +85,50 @@ export default function VoiceAnalytics() {
             <audio controls src={audioURL} className="mt-4 w-full max-w-md" />
           )}
         </GlassCard>
+
+        {/* Results Section */}
+        {result && !loading && !result.error && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className="grid grid-cols-1 md:grid-cols-3 gap-6"
+          >
+            <GlassCard>
+              <h3 className="text-gray-400 mb-2 flex items-center gap-2">
+                <Activity size={18} className="text-blue-400" />
+                Stress Score
+              </h3>
+              <div className="text-4xl font-bold text-blue-400">
+                {result?.stress_score ?? "--"}
+              </div>
+            </GlassCard>
+
+            <GlassCard>
+              <h3 className="text-gray-400 mb-2 flex items-center gap-2">
+                <AlertTriangle size={18} className="text-yellow-400" />
+                Fatigue Score
+              </h3>
+              <div className="text-4xl font-bold text-yellow-400">
+                {result?.fatigue_score ?? "--"}
+              </div>
+            </GlassCard>
+
+            <GlassCard>
+              <h3 className="text-gray-400 mb-2">Recommendation</h3>
+              <p className="text-green-400">
+                {result?.recommendation ?? "No recommendation available"}
+              </p>
+            </GlassCard>
+          </motion.div>
+        )}
+
+        {/* Error State */}
+        {result?.error && (
+          <GlassCard className="text-center text-red-400">
+            <p>❌ {result.error}</p>
+          </GlassCard>
+        )}
       </div>
     </Layout>
   );

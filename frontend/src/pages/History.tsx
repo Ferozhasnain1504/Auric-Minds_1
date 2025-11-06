@@ -37,13 +37,13 @@ const insights = [
     color: '#FFB300',
     trend: 'up',
   },
-  {
-    icon: '💓',
-    title: 'Heart Rate Variability',
-    description: 'Excellent recovery on weekend. Heart rate dropped to healthy baseline of 65 bpm.',
-    color: '#00E676',
-    trend: 'down',
-  },
+  // {
+  //   icon: '💓',
+  //   title: 'Heart Rate Variability',
+  //   description: 'Excellent recovery on weekend. Heart rate dropped to healthy baseline of 65 bpm.',
+  //   color: '#00E676',
+  //   trend: 'down',
+  // },
   {
     icon: '😌',
     title: 'Wellness Improvement',
