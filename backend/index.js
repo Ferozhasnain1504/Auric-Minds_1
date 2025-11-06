@@ -5,7 +5,9 @@ const cors = require('cors');
 const mongoose = require('mongoose');
 const http = require('http');
 const { Server } = require('socket.io');
+const audioRoutes = require("./routes/audio");
 const path = require('path');
+
 
 // routes
 const authRoutes = require('./routes/auth');
@@ -30,6 +32,9 @@ app.use('/api/auth', authRoutes);
 app.use('/api/readings', readingsRoutes);
 app.use('/api/sensors', sensorsRoutes);
 app.use('/api/tickets', ticketsRoutes);
+app.use("/api/audio", audioRoutes);
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
 
 // simple health check
 app.get('/api/health', (req, res) => res.json({ ok:true, time: new Date() }));
