@@ -61,7 +61,7 @@
       ]
     },
     define: {
-      global : 'window',
-      process: { env: {} },
+      global: 'globalThis',
+      'process.env': '{}',
     }
   });
