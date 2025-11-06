@@ -52,6 +52,40 @@ except Exception as e:
 # 🎙️ ENDPOINT 1: VOICE ANALYSIS (/analyze)
 # Used by Node.js Gateway
 # ==========================================================
+
+def generate_wellness_recommendation(wellness_index, vsd_score):
+    """Generates a text recommendation based on the stable Wellness Index (0-100) 
+       and the volatile VSD Score (0-100, where 100=Calm/Low Risk).
+    """
+    
+    # NOTE: Both scores are 0=High Risk, 100=Low Risk
+
+    # 1. CRITICAL STRESS (VSD score is very low, indicating severe momentary stress)
+    if vsd_score < 30:
+        return "🔴 Critical Stress Spike Detected! Immediate Action Required: Stop work, stand up, and perform deep breathing exercises. Take a 15-minute break."
+
+    # 2. HIGH STRESS (Stable index is low, indicating sustained fatigue)
+    elif wellness_index < 50:
+        return "⚠️ Sustained High Fatigue. Recommendation: Disengage from the current task and rest. Review your sleep patterns."
+    
+    # 3. MODERATE STRESS (VSD is moderate, or stable index is moderate)
+    elif vsd_score < 75 or wellness_index < 80:
+        # Check if ambient conditions might be contributing (Heuristic: If smooth T/H estimates are below ideal)
+        # We can't access T/H directly here, so we stick to VSD/Wellness Index
+        if vsd_score < 75:
+            return "🟡 Moderate Stress/Fatigue Detected. Recommendation: Take a short break, stretch, and check if your environment (temperature/lighting) is comfortable."
+        else: # wellness_index is in the moderate range
+            return "🟡 Moderate Fatigue/Wellness Drop. Continue monitoring. Maintain focus on ergonomic comfort."
+
+    # 4. LOW/GOOD WELLNESS
+    else: # vsd_score >= 75 and wellness_index >= 80
+        return "🟢 Low Stress Detected. System Stable. Keep up the good work and maintain current focus."
+# --- The rest of app.py continues below ---
+
+# ==========================================================
+# 🎙️ ENDPOINT 1: VOICE ANALYSIS (/analyze)
+# Used by Node.js Gateway
+# ==========================================================
 @app.route('/analyze', methods=['POST'])
 def analyze_voice():
     # 1. Handle File Upload
@@ -83,12 +117,17 @@ def analyze_voice():
             measurement_source='VSD' # <-- Voice score is the measurement
         )
 
+        # 4. Generate Recommendation
+        # This function must be defined globally in app.py!
+        recommendation_text = generate_wellness_recommendation(final_wellness_index, vsd_risk_score) # <--- ADD THIS ARGUMENT
+        
         return jsonify({
             'status': 'success',
             'vsd_risk_score': round(vsd_risk_score, 2),
             'current_temp_estimate': round(smoothed_T, 2),
             'current_humidity_estimate': round(smoothed_H, 2),
-            'final_wellness_index': round(final_wellness_index, 2)
+            'final_wellness_index': round(final_wellness_index, 2),
+            'recommendation': recommendation_text # <-- Text output added
         })
 
     except Exception as e:
@@ -96,10 +135,9 @@ def analyze_voice():
         return jsonify({'error': f'ML Processing Error: {e}'}), 500
         
     finally:
-        # 4. Cleanup
+        # 5. Cleanup
         if os.path.exists(filepath):
             os.remove(filepath)
-
 
 # ==========================================================
 # 🌡️ ENDPOINT 2: AMBIENT SENSING (/ambient)
