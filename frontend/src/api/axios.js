@@ -13,7 +13,13 @@ API.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
-    config.headers["Content-Type"] = "application/json";
+    // Only set JSON content type when not sending FormData (browser will set boundary)
+    if (!(config.data instanceof FormData)) {
+      config.headers["Content-Type"] = "application/json";
+    } else {
+      // Let the browser set the correct Content-Type including the boundary
+      delete config.headers["Content-Type"];
+    }
     return config;
   },
   (error) => Promise.reject(error)
