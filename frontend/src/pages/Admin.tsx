@@ -16,14 +16,14 @@ interface UserData {
 }
 
 const userData: UserData[] = [
-  { id: 1, name: 'Sarah Johnson', department: 'Engineering', stressLevel: 45, fatigueLevel: 38, wellnessScore: 72, status: 'healthy', lastActive: '2 min ago' },
-  { id: 2, name: 'Mike Chen', department: 'Design', stressLevel: 82, fatigueLevel: 75, wellnessScore: 35, status: 'critical', lastActive: '5 min ago' },
-  { id: 3, name: 'Emma Davis', department: 'Marketing', stressLevel: 65, fatigueLevel: 60, wellnessScore: 52, status: 'warning', lastActive: '10 min ago' },
-  { id: 4, name: 'James Wilson', department: 'Sales', stressLevel: 38, fatigueLevel: 32, wellnessScore: 78, status: 'healthy', lastActive: '1 min ago' },
+  { id: 1, name: 'Atharva', department: 'Engineering', stressLevel: 45, fatigueLevel: 38, wellnessScore: 72, status: 'healthy', lastActive: '2 min ago' },
+  { id: 2, name: 'Amoghvarsh', department: 'Design', stressLevel: 82, fatigueLevel: 75, wellnessScore: 35, status: 'critical', lastActive: '5 min ago' },
+  { id: 3, name: 'Feroz', department: 'Marketing', stressLevel: 65, fatigueLevel: 60, wellnessScore: 52, status: 'warning', lastActive: '10 min ago' },
+  { id: 4, name: 'Samarth', department: 'Sales', stressLevel: 38, fatigueLevel: 32, wellnessScore: 78, status: 'healthy', lastActive: '1 min ago' },
   { id: 5, name: 'Lisa Brown', department: 'Engineering', stressLevel: 72, fatigueLevel: 68, wellnessScore: 42, status: 'warning', lastActive: '8 min ago' },
-  { id: 6, name: 'David Martinez', department: 'HR', stressLevel: 28, fatigueLevel: 25, wellnessScore: 85, status: 'healthy', lastActive: '3 min ago' },
-  { id: 7, name: 'Amy Zhang', department: 'Design', stressLevel: 55, fatigueLevel: 48, wellnessScore: 62, status: 'warning', lastActive: '12 min ago' },
-  { id: 8, name: 'Tom Anderson', department: 'Engineering', stressLevel: 90, fatigueLevel: 85, wellnessScore: 28, status: 'critical', lastActive: '15 min ago' },
+  { id: 6, name: 'Pawan', department: 'HR', stressLevel: 28, fatigueLevel: 25, wellnessScore: 85, status: 'healthy', lastActive: '3 min ago' },
+  { id: 7, name: 'Aryan', department: 'Design', stressLevel: 55, fatigueLevel: 48, wellnessScore: 62, status: 'warning', lastActive: '12 min ago' },
+  { id: 8, name: 'Mithun', department: 'Engineering', stressLevel: 90, fatigueLevel: 85, wellnessScore: 28, status: 'critical', lastActive: '15 min ago' },
 ];
 
 const departmentStats = [
