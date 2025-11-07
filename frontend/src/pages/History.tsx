@@ -1,9 +1,11 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { motion } from 'motion/react';
 import { Layout } from '../components/Layout';
 import { GlassCard } from '../components/GlassCard';
 import { Calendar, Download, TrendingUp, TrendingDown } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ComposedChart, Area, Bar } from 'recharts';
+import { jsPDF } from 'jspdf';
+import html2canvas from 'html2canvas';
 
 const weeklyData = [
   { day: 'Mon', stress: 45, fatigue: 40, hr: 72, temp: 23 },
@@ -55,10 +57,48 @@ const insights = [
 
 export default function History() {
   const [timeRange, setTimeRange] = useState<'day' | 'week' | 'month'>('week');
+  const exportRef = useRef<HTMLDivElement | null>(null);
+
+  const exportPDF = async () => {
+    if (!exportRef.current) return;
+    try {
+      // Render the area to a canvas at high resolution
+      const canvas = await html2canvas(exportRef.current as HTMLElement, { scale: 2, useCORS: true });
+      const imgData = canvas.toDataURL('image/png');
+
+      // Create PDF. We'll size the image to the full page width and preserve aspect ratio
+      const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+
+      // Use canvas dimensions to compute aspect-correct image height for the PDF
+      const canvasW = canvas.width;
+      const canvasH = canvas.height;
+      const imgWidth = pageWidth;
+      const imgHeight = (canvasH / canvasW) * imgWidth;
+
+      let position = 0;
+      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+
+      // If image height is larger than page, add pages and continue the image at negative offsets
+      while (imgHeight - position > pageHeight) {
+        position -= pageHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+      }
+
+      pdf.save('wellness-history.pdf');
+    } catch (err) {
+      console.error('PDF export failed', err);
+      // Friendly fallback for users
+      // eslint-disable-next-line no-alert
+      alert('Could not export PDF. See console for details.');
+    }
+  };
 
   return (
     <Layout>
-      <div className="space-y-6">
+      <div className="space-y-6" ref={exportRef}>
         {/* Header */}
         <div className="flex items-start justify-between">
           <div>
@@ -67,14 +107,14 @@ export default function History() {
           </div>
 
           <div className="flex gap-3">
-            <motion.button
+            <button
               className="glass-card rounded-2xl px-6 py-3 flex items-center gap-2 hover:bg-white/10 transition-all"
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
+              onClick={exportPDF}
+              type="button"
             >
               <Download className="w-5 h-5" />
               Export PDF
-            </motion.button>
+            </button>
             <motion.button
               className="glass-card rounded-2xl px-6 py-3 flex items-center gap-2 hover:bg-white/10 transition-all"
               whileHover={{ scale: 1.05 }}
@@ -263,11 +303,8 @@ export default function History() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.1 }}
               >
-                <GlassCard 
-                  hover 
-                  className="border-l-4" 
-                  style={{ borderLeftColor: insight.color }}
-                >
+                <div className="border-l-4" style={{ borderLeftColor: insight.color }}>
+                  <GlassCard hover className="">
                   <div className="flex items-start gap-4">
                     <div className="text-4xl">{insight.icon}</div>
                     <div className="flex-1">
@@ -297,6 +334,7 @@ export default function History() {
                     </div>
                   </div>
                 </GlassCard>
+                </div>
               </motion.div>
             ))}
           </div>
