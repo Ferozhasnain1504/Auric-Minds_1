@@ -139,9 +139,11 @@ python main.py
 
 ## 👥 Team
 
-Project Title: AI-Driven Early Fatigue and Stress Detection Using Ambient Sensing & Voice Analytics
-Institution: [Your College Name]
-Team Members: [Amoghvarsh Bhasme], [Atharva Madamshetty], [Feroz Hasnain], [Samarth Deshpande], [K Pavan Gowda]
+**Project Title**: AI-Driven Early Fatigue and Stress Detection Using Ambient Sensing & Voice Analytics
+
+**Institution**: JSS Academy of Technical Education
+
+**Team Members**: Amoghvarsh Bhasme, Atharva Madamshetty, Feroz Hasnain, Samarth Deshpande, K Pavan Gowda
 
 ---
 
