@@ -121,13 +121,18 @@ def analyze_voice():
         # This function must be defined globally in app.py!
         recommendation_text = generate_wellness_recommendation(final_wellness_index, vsd_risk_score) # <--- ADD THIS ARGUMENT
         
+        # Derive a simple fatigue score from the wellness index: lower wellness => higher fatigue
+        fatigue_score = round(max(0.0, 100.0 - final_wellness_index), 2)
+
         return jsonify({
             'status': 'success',
             'vsd_risk_score': round(vsd_risk_score, 2),
+            'fatigue_score': fatigue_score,
             'current_temp_estimate': round(smoothed_T, 2),
             'current_humidity_estimate': round(smoothed_H, 2),
             'final_wellness_index': round(final_wellness_index, 2),
-            'recommendation': recommendation_text # <-- Text output added
+            'recommendation': recommendation_text,
+            'features': features
         })
 
     except Exception as e:
@@ -138,6 +143,56 @@ def analyze_voice():
         # 5. Cleanup
         if os.path.exists(filepath):
             os.remove(filepath)
+
+
+
+# ==========================================================
+# 🎯 NEW ENDPOINT: Accept precomputed feature vectors (JSON)
+#    POST /predict_features
+#    Body: { device_id: ..., timestamp: ..., features: [16 numbers], sensors: {...} }
+# ==========================================================
+@app.route('/predict_features', methods=['POST'])
+def predict_features():
+    try:
+        data = request.get_json()
+        if not data or 'features' not in data:
+            return jsonify({'error': 'features array is required'}), 400
+
+        features = data['features']
+        if not isinstance(features, list) or len(features) != 16:
+            return jsonify({'error': f'features must be a list of length 16, got {len(features)}'}), 400
+
+        # Convert to list of floats
+        feature_vector = [float(x) for x in features]
+
+        # 1. Predict VSD risk from provided features
+        vsd_risk_score = predict_vsd_risk(feature_vector)
+
+        # 2. Fusion update using smoothed ambient
+        smoothed_T = DHT_KALMAN_FILTER.temp_estimate
+        smoothed_H = DHT_KALMAN_FILTER.humidity_estimate
+        final_wellness_index = FUSION_ENGINE.update_fusion(
+            vsd_risk_score, smoothed_T, smoothed_H, measurement_source='VSD'
+        )
+
+        recommendation_text = generate_wellness_recommendation(final_wellness_index, vsd_risk_score)
+
+        fatigue_score = round(max(0.0, 100.0 - final_wellness_index), 2)
+
+        return jsonify({
+            'status': 'success',
+            'vsd_risk_score': round(vsd_risk_score, 2),
+            'fatigue_score': fatigue_score,
+            'current_temp_estimate': round(smoothed_T, 2),
+            'current_humidity_estimate': round(smoothed_H, 2),
+            'final_wellness_index': round(final_wellness_index, 2),
+            'recommendation': recommendation_text,
+            'features_received': feature_vector
+        })
+
+    except Exception as e:
+        app.logger.error(f'predict_features error: {e}')
+        return jsonify({'error': f'Prediction failed: {e}'}), 500
 
 # ==========================================================
 # 🌡️ ENDPOINT 2: AMBIENT SENSING (/ambient)
